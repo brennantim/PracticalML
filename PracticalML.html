@@ -1,0 +1,162 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title>Practical Machine Learning Project</title>
+  <meta name="Author" content="Tim Brennan">
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="1504.82">
+  <style type="text/css">
+    p.p4 {margin: 0.0px 0.0px 10.0px 0.0px; line-height: 20.0px; font: 14.0px 'Helvetica Neue'; color: #333333; -webkit-text-stroke: #333333}
+    p.p5 {margin: 0.0px 0.0px 0.0px 0.0px; line-height: 18.0px; font: 13.0px Courier; color: #333333; -webkit-text-stroke: #333333; background-color: #f5f5f5}
+    p.p6 {margin: 0.0px 0.0px 0.0px 0.0px; line-height: 18.0px; font: 13.0px Courier; color: #333333; -webkit-text-stroke: #333333; background-color: #ffffff}
+    p.p7 {margin: 0.0px 0.0px 0.0px 0.0px; line-height: 18.0px; font: 13.0px Courier; color: #333333; -webkit-text-stroke: #333333; background-color: #f5f5f5; min-height: 16.0px}
+    span.s1 {font-kerning: none}
+  </style>
+</head>
+<body>
+<h1 style="margin: 0.0px 0.0px 10.0px 0.0px; line-height: 41.0px; font: 38.0px 'Helvetica Neue'; color: #333333; -webkit-text-stroke: #333333"><span class="s1">Practical Machine Learning Project</span></h1>
+<h4 style="margin: 0.0px 0.0px 10.0px 0.0px; line-height: 19.0px; font: 18.0px 'Helvetica Neue'; color: #333333; -webkit-text-stroke: #333333"><span class="s1"><i>Tim Brennan</i></span></h4>
+<h4 style="margin: 0.0px 0.0px 10.0px 0.0px; line-height: 19.0px; font: 18.0px 'Helvetica Neue'; color: #333333; -webkit-text-stroke: #333333"><span class="s1"><i>4/27/2017</i></span></h4>
+<h2 style="margin: 0.0px 0.0px 10.0px 0.0px; line-height: 33.0px; font: 30.0px 'Helvetica Neue'; color: #333333; -webkit-text-stroke: #333333"><span class="s1">Introduction</span></h2>
+<p class="p4"><span class="s1">Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.</span></p>
+<p class="p4"><span class="s1">We are trying to predict which classe the subject performed the test.</span></p>
+<h2 style="margin: 0.0px 0.0px 10.0px 0.0px; line-height: 33.0px; font: 30.0px 'Helvetica Neue'; color: #333333; -webkit-text-stroke: #333333"><span class="s1">Load Data</span></h2>
+<p class="p5"><span class="s1">library(caret)</span></p>
+<p class="p6"><span class="s1">## Loading required package: lattice</span></p>
+<p class="p6"><span class="s1">## Loading required package: ggplot2</span></p>
+<p class="p5"><span class="s1">set.seed(5555)</span></p>
+<p class="p7"><span class="s1"></span><br></p>
+<p class="p5"><span class="s1">trainUrl &lt;- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"</span></p>
+<p class="p5"><span class="s1">testUrl &lt;- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"</span></p>
+<p class="p7"><span class="s1"></span><br></p>
+<p class="p5"><span class="s1">df.train &lt;- read.csv(url(trainUrl), na.strings=c("NA","#DIV/0!",""))</span></p>
+<p class="p5"><span class="s1">df.test &lt;- read.csv(url(testUrl), na.strings=c("NA","#DIV/0!",""))</span></p>
+<p class="p4"><span class="s1">So we can calculate the out of sample error, we must split the training set into its own, train and test sets.</span></p>
+<p class="p5"><span class="s1">inTrain &lt;- createDataPartition(df.train$classe, p=0.6, list=FALSE)</span></p>
+<p class="p5"><span class="s1">myTraining &lt;- df.train[inTrain, ]</span></p>
+<p class="p5"><span class="s1">myTesting &lt;- df.train[-inTrain, ]</span></p>
+<p class="p7"><span class="s1"></span><br></p>
+<p class="p5"><span class="s1">dim(myTraining)</span></p>
+<p class="p6"><span class="s1">## [1] 11776 <span class="Apple-converted-space">  </span>160</span></p>
+<p class="p5"><span class="s1">dim(myTesting)</span></p>
+<p class="p6"><span class="s1">## [1] 7846<span class="Apple-converted-space">  </span>160</span></p>
+<h2 style="margin: 0.0px 0.0px 10.0px 0.0px; line-height: 33.0px; font: 30.0px 'Helvetica Neue'; color: #333333; -webkit-text-stroke: #333333"><span class="s1">Clean Data</span></h2>
+<p class="p4"><span class="s1">There are quite a few variables so we want to eliminate those that won’t be good predictors. We’ll get rid of those features with near-zero variance (nzv), majority NA values and those that logically do not make sense (username, time stamp, etc.). We will have to do the same transformations on both our training and testing set.</span></p>
+<p class="p5"><span class="s1"># remove nzv</span></p>
+<p class="p5"><span class="s1">nzv &lt;- nearZeroVar(myTraining)</span></p>
+<p class="p5"><span class="s1">myTraining &lt;- myTraining[, -nzv]</span></p>
+<p class="p5"><span class="s1">myTesting &lt;- myTesting[, -nzv]</span></p>
+<p class="p7"><span class="s1"></span><br></p>
+<p class="p5"><span class="s1"># remove variables that are almost always NA (95% NA values)</span></p>
+<p class="p5"><span class="s1">mostlyNA &lt;- sapply(myTraining, function(x) mean(is.na(x))) &gt; 0.95</span></p>
+<p class="p5"><span class="s1">myTraining &lt;- myTraining[, mostlyNA==F]</span></p>
+<p class="p5"><span class="s1">myTesting &lt;- myTesting[, mostlyNA==F]</span></p>
+<p class="p7"><span class="s1"></span><br></p>
+<p class="p5"><span class="s1"># remove variables that would be bad predictors (first 7 variables)</span></p>
+<p class="p5"><span class="s1">myTraining &lt;- myTraining[, -(1:7)]</span></p>
+<p class="p5"><span class="s1">myTesting &lt;- myTesting[, -(1:7)]</span></p>
+<h2 style="margin: 0.0px 0.0px 10.0px 0.0px; line-height: 33.0px; font: 30.0px 'Helvetica Neue'; color: #333333; -webkit-text-stroke: #333333"><span class="s1">Model Selection</span></h2>
+<p class="p4"><span class="s1">Will start model selection with Random Forests.</span></p>
+<p class="p5"><span class="s1">library(randomForest)</span></p>
+<p class="p6"><span class="s1">## randomForest 4.6-12</span></p>
+<p class="p6"><span class="s1">## Type rfNews() to see new features/changes/bug fixes.</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## Attaching package: 'randomForest'</span></p>
+<p class="p6"><span class="s1">## The following object is masked from 'package:ggplot2':</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">    </span>margin</span></p>
+<p class="p5"><span class="s1"># instruct train to use 3-fold CV to select optimal tuning parameters</span></p>
+<p class="p5"><span class="s1">cntrl_params &lt;- trainControl(method="cv", number=3, verboseIter=F)</span></p>
+<p class="p7"><span class="s1"></span><br></p>
+<p class="p5"><span class="s1"># fit model on myTraining</span></p>
+<p class="p5"><span class="s1">fit &lt;- train(classe ~ ., data=myTraining, method="rf", trControl=cntrl_params)</span></p>
+<p class="p7"><span class="s1"></span><br></p>
+<p class="p5"><span class="s1"># print the final model</span></p>
+<p class="p5"><span class="s1">fit$finalModel</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## Call:</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">  </span>randomForest(x = x, y = y, mtry = param$mtry)<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                </span>Type of random forest: classification</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                      </span>Number of trees: 500</span></p>
+<p class="p6"><span class="s1">## No. of variables tried at each split: 2</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">        </span>OOB estimate of<span class="Apple-converted-space">  </span>error rate: 0.87%</span></p>
+<p class="p6"><span class="s1">## Confusion matrix:</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">      </span>A<span class="Apple-converted-space">    </span>B<span class="Apple-converted-space">    </span>C<span class="Apple-converted-space">    </span>D<span class="Apple-converted-space">    </span>E class.error</span></p>
+<p class="p6"><span class="s1">## A 3343<span class="Apple-converted-space">    </span>4<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>1<span class="Apple-converted-space">    </span>0 0.001493429</span></p>
+<p class="p6"><span class="s1">## B <span class="Apple-converted-space">  </span>19 2249 <span class="Apple-converted-space">  </span>11<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0 0.013163668</span></p>
+<p class="p6"><span class="s1">## C<span class="Apple-converted-space">    </span>0 <span class="Apple-converted-space">  </span>13 2039<span class="Apple-converted-space">    </span>2<span class="Apple-converted-space">    </span>0 0.007302824</span></p>
+<p class="p6"><span class="s1">## D<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0 <span class="Apple-converted-space">  </span>40 1885<span class="Apple-converted-space">    </span>5 0.023316062</span></p>
+<p class="p6"><span class="s1">## E<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>2<span class="Apple-converted-space">    </span>5 2158 0.003233256</span></p>
+<p class="p4"><span class="s1">Use the fitted model to predict the classe in myTesting and compare the predicted versus the actual labels classe:</span></p>
+<p class="p5"><span class="s1"># use model to predict classe in validation set (myTesting)</span></p>
+<p class="p5"><span class="s1">predictions &lt;- predict(fit, newdata=myTesting)</span></p>
+<p class="p7"><span class="s1"></span><br></p>
+<p class="p5"><span class="s1"># show confusion matrix and estimate out-of-sample error</span></p>
+<p class="p5"><span class="s1">confusionMatrix(myTesting$classe, predictions)</span></p>
+<p class="p6"><span class="s1">## Confusion Matrix and Statistics</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">          </span>Reference</span></p>
+<p class="p6"><span class="s1">## Prediction<span class="Apple-converted-space">    </span>A<span class="Apple-converted-space">    </span>B<span class="Apple-converted-space">    </span>C<span class="Apple-converted-space">    </span>D<span class="Apple-converted-space">    </span>E</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">          </span>A 2226<span class="Apple-converted-space">    </span>6<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">          </span>B <span class="Apple-converted-space">  </span>15 1498<span class="Apple-converted-space">    </span>5<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">          </span>C<span class="Apple-converted-space">    </span>0 <span class="Apple-converted-space">  </span>13 1353<span class="Apple-converted-space">    </span>2<span class="Apple-converted-space">    </span>0</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">          </span>D<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0 <span class="Apple-converted-space">  </span>31 1254<span class="Apple-converted-space">    </span>1</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">          </span>E<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>7 1435</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## Overall Statistics</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                                           </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                </span>Accuracy : 0.9898 <span class="Apple-converted-space">         </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                  </span>95% CI : (0.9873, 0.9919)</span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">    </span>No Information Rate : 0.2856 <span class="Apple-converted-space">         </span></span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">    </span>P-Value [Acc &gt; NIR] : &lt; 2.2e-16<span class="Apple-converted-space">       </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                                           </span></span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">                  </span>Kappa : 0.9871 <span class="Apple-converted-space">         </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">  </span>Mcnemar's Test P-Value : NA <span class="Apple-converted-space">             </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## Statistics by Class:</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                      </span>Class: A Class: B Class: C Class: D Class: E</span></p>
+<p class="p6"><span class="s1">## Sensitivity<span class="Apple-converted-space">            </span>0.9933 <span class="Apple-converted-space">  </span>0.9875 <span class="Apple-converted-space">  </span>0.9741 <span class="Apple-converted-space">  </span>0.9929 <span class="Apple-converted-space">  </span>0.9993</span></p>
+<p class="p6"><span class="s1">## Specificity<span class="Apple-converted-space">            </span>0.9989 <span class="Apple-converted-space">  </span>0.9968 <span class="Apple-converted-space">  </span>0.9977 <span class="Apple-converted-space">  </span>0.9951 <span class="Apple-converted-space">  </span>0.9989</span></p>
+<p class="p6"><span class="s1">## Pos Pred Value <span class="Apple-converted-space">        </span>0.9973 <span class="Apple-converted-space">  </span>0.9868 <span class="Apple-converted-space">  </span>0.9890 <span class="Apple-converted-space">  </span>0.9751 <span class="Apple-converted-space">  </span>0.9951</span></p>
+<p class="p6"><span class="s1">## Neg Pred Value <span class="Apple-converted-space">        </span>0.9973 <span class="Apple-converted-space">  </span>0.9970 <span class="Apple-converted-space">  </span>0.9944 <span class="Apple-converted-space">  </span>0.9986 <span class="Apple-converted-space">  </span>0.9998</span></p>
+<p class="p6"><span class="s1">## Prevalence <span class="Apple-converted-space">            </span>0.2856 <span class="Apple-converted-space">  </span>0.1933 <span class="Apple-converted-space">  </span>0.1770 <span class="Apple-converted-space">  </span>0.1610 <span class="Apple-converted-space">  </span>0.1830</span></p>
+<p class="p6"><span class="s1">## Detection Rate <span class="Apple-converted-space">        </span>0.2837 <span class="Apple-converted-space">  </span>0.1909 <span class="Apple-converted-space">  </span>0.1724 <span class="Apple-converted-space">  </span>0.1598 <span class="Apple-converted-space">  </span>0.1829</span></p>
+<p class="p6"><span class="s1">## Detection Prevalence <span class="Apple-converted-space">  </span>0.2845 <span class="Apple-converted-space">  </span>0.1935 <span class="Apple-converted-space">  </span>0.1744 <span class="Apple-converted-space">  </span>0.1639 <span class="Apple-converted-space">  </span>0.1838</span></p>
+<p class="p6"><span class="s1">## Balanced Accuracy<span class="Apple-converted-space">      </span>0.9961 <span class="Apple-converted-space">  </span>0.9922 <span class="Apple-converted-space">  </span>0.9859 <span class="Apple-converted-space">  </span>0.9940 <span class="Apple-converted-space">  </span>0.9991</span></p>
+<p class="p4"><span class="s1">With 99% accuracy, I got lucky on my first attempt! The out of sample error rate of 1% is very accurate. No need to check other algorithms at this point. I can use Random Forest to predict on the test set.</span></p>
+<h2 style="margin: 0.0px 0.0px 10.0px 0.0px; line-height: 33.0px; font: 30.0px 'Helvetica Neue'; color: #333333; -webkit-text-stroke: #333333"><span class="s1">Retraining</span></h2>
+<p class="p4"><span class="s1">We want to re-train the model on the <b>entire</b> training set (df.train) to increase accuracy.</span></p>
+<p class="p5"><span class="s1"># remove nzv</span></p>
+<p class="p5"><span class="s1">nzv &lt;- nearZeroVar(df.train)</span></p>
+<p class="p5"><span class="s1">df.train &lt;- df.train[, -nzv]</span></p>
+<p class="p5"><span class="s1">df.test &lt;- df.test[, -nzv]</span></p>
+<p class="p7"><span class="s1"></span><br></p>
+<p class="p5"><span class="s1"># remove variables that are almost always NA (95% NA values)</span></p>
+<p class="p5"><span class="s1">mostlyNA &lt;- sapply(df.train, function(x) mean(is.na(x))) &gt; 0.95</span></p>
+<p class="p5"><span class="s1">df.train &lt;- df.train[, mostlyNA==F]</span></p>
+<p class="p5"><span class="s1">df.test &lt;- df.test[, mostlyNA==F]</span></p>
+<p class="p7"><span class="s1"></span><br></p>
+<p class="p5"><span class="s1"># remove variables that would be bad predictors (first 7 variables)</span></p>
+<p class="p5"><span class="s1">df.train &lt;- df.train[, -(1:7)]</span></p>
+<p class="p5"><span class="s1">df.test &lt;- df.test[, -(1:7)]</span></p>
+<p class="p7"><span class="s1"></span><br></p>
+<p class="p5"><span class="s1"># re-fit model (df.train)</span></p>
+<p class="p5"><span class="s1">cntrl_params &lt;- trainControl(method="cv", number=3, verboseIter=F)</span></p>
+<p class="p5"><span class="s1">fit &lt;- train(classe ~ ., data=df.train, method="rf", trControl=cntrl_params)</span></p>
+<h2 style="margin: 0.0px 0.0px 10.0px 0.0px; line-height: 33.0px; font: 30.0px 'Helvetica Neue'; color: #333333; -webkit-text-stroke: #333333"><span class="s1">Test Set Predictions</span></h2>
+<p class="p4"><span class="s1">Use the model to predict classe for the test set (df.test) and print to screen for quiz portion.</span></p>
+<p class="p5"><span class="s1"># predict on test set</span></p>
+<p class="p5"><span class="s1">predictions &lt;- predict(fit, newdata=df.test)</span></p>
+<p class="p7"><span class="s1"></span><br></p>
+<p class="p5"><span class="s1"># convert predictions to character vector</span></p>
+<p class="p5"><span class="s1">predictions &lt;- as.character(predictions)</span></p>
+<p class="p7"><span class="s1"></span><br></p>
+<p class="p5"><span class="s1">predictions</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">  </span>[1] "B" "A" "B" "A" "A" "E" "D" "B" "A" "A" "B" "C" "B" "A" "E" "E" "A"</span></p>
+<p class="p6"><span class="s1">## [18] "B" "B" "B"</span></p>
+</body>
+</html>

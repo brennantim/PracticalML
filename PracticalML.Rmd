@@ -1,0 +1,131 @@
+---
+title: "Practical Machine Learning Project"
+author: "Tim Brennan"
+date: "4/27/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+
+We are trying to predict which classe the subject performed the test.
+
+## Load Data
+
+```{r}
+library(caret)
+
+set.seed(5555)
+
+trainUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+df.train <- read.csv(url(trainUrl), na.strings=c("NA","#DIV/0!",""))
+df.test <- read.csv(url(testUrl), na.strings=c("NA","#DIV/0!",""))
+
+```
+
+So we can calculate the out of sample error, we must split the training set into its own, train and test sets.
+
+```{r}
+
+inTrain <- createDataPartition(df.train$classe, p=0.6, list=FALSE)
+myTraining <- df.train[inTrain, ]
+myTesting <- df.train[-inTrain, ]
+
+dim(myTraining)
+dim(myTesting)
+```
+## Clean Data
+
+There are quite a few variables so we want to eliminate those that won't be good predictors.  We'll get rid of those features with near-zero variance (nzv), majority NA values and those that logically do not make sense (username, time stamp, etc.).  We will have to do the same transformations on both our training and testing set.
+
+```{r}
+# remove nzv
+nzv <- nearZeroVar(myTraining)
+myTraining <- myTraining[, -nzv]
+myTesting <- myTesting[, -nzv]
+
+# remove variables that are almost always NA (95% NA values)
+mostlyNA <- sapply(myTraining, function(x) mean(is.na(x))) > 0.95
+myTraining <- myTraining[, mostlyNA==F]
+myTesting <- myTesting[, mostlyNA==F]
+
+# remove variables that would be bad predictors (first 7 variables)
+myTraining <- myTraining[, -(1:7)]
+myTesting <- myTesting[, -(1:7)]
+```
+
+## Model Selection
+
+Will start model selection with Random Forests.  
+
+```{r}
+library(randomForest)
+
+# instruct train to use 3-fold CV to select optimal tuning parameters
+cntrl_params <- trainControl(method="cv", number=3, verboseIter=F)
+
+# fit model on myTraining
+fit <- train(classe ~ ., data=myTraining, method="rf", trControl=cntrl_params)
+
+# print the final model
+fit$finalModel
+```
+
+Use the fitted model to predict the classe in myTesting and compare the predicted versus the actual labels classe:
+
+```{r}
+# use model to predict classe in validation set (myTesting)
+predictions <- predict(fit, newdata=myTesting)
+
+# show confusion matrix and estimate out-of-sample error
+confusionMatrix(myTesting$classe, predictions)
+```
+
+With 99% accuracy, I got lucky on my first attempt!  The out of sample error rate of 1% is very accurate.  No need to check other algorithms at this point.  I can use Random Forest to predict on the test set.
+
+## Retraining
+
+We want to re-train the model on the **entire** training set (df.train) to increase accuracy.
+
+```{r}
+# remove nzv
+nzv <- nearZeroVar(df.train)
+df.train <- df.train[, -nzv]
+df.test <- df.test[, -nzv]
+
+# remove variables that are almost always NA (95% NA values)
+mostlyNA <- sapply(df.train, function(x) mean(is.na(x))) > 0.95
+df.train <- df.train[, mostlyNA==F]
+df.test <- df.test[, mostlyNA==F]
+
+# remove variables that would be bad predictors (first 7 variables)
+df.train <- df.train[, -(1:7)]
+df.test <- df.test[, -(1:7)]
+
+# re-fit model (df.train)
+cntrl_params <- trainControl(method="cv", number=3, verboseIter=F)
+fit <- train(classe ~ ., data=df.train, method="rf", trControl=cntrl_params)
+
+```
+
+## Test Set Predictions
+
+Use the model to predict classe for the test set (df.test) and print to screen for quiz portion.
+
+```{r}
+# predict on test set
+predictions <- predict(fit, newdata=df.test)
+
+# convert predictions to character vector
+predictions <- as.character(predictions)
+
+predictions
+
+```
